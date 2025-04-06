@@ -5,7 +5,6 @@ import cv2
 import time
 import json
 import os
-#from shared_cameras import camera1, camera2  # Import shared camera objects
 
 
 app = Flask(__name__)
@@ -45,8 +44,8 @@ class CameraStream:
 # ─────────────────────────────
 # Initialize both camera feeds
 # ─────────────────────────────
-camera1 = CameraStream(1)
-camera2 = CameraStream(0)
+camera1 = CameraStream(0)
+camera2 = CameraStream(1)
 
 # ───────────────────────────────
 # Frame Generator with FPS Logging
@@ -194,6 +193,63 @@ def index():
     <html>
       <head>
         <title>Driver Monitoring Live Stream</title>
+        <style>
+          /* Make sure body stretches to fill the entire screen height */
+          html, body {
+            margin: 0;
+            padding: 0;
+          }
+          
+          /* Apply the vertical gradient to the entire page */
+          body {
+            min-height: 100vh; /* ensures gradient extends fully */
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom, #7D33A3, #6882C5);
+            background-repeat: no-repeat;
+            /* You can optionally pin the gradient so it doesn't move when scrolling:
+            background-attachment: fixed; */
+          }
+
+          /* Container to center the two cards side-by-side */
+          .container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 40px;         /* Space between the two cards */
+            padding: 40px;     /* Space from the edges of the page */
+          }
+
+          /* The “card-like” styling for each camera feed/status panel */
+          .card {
+            background-color: rgba(255, 255, 255, 0.8);  /* White w/ transparency */
+            border-radius: 10px;                         /* Rounded corners */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);      /* Subtle drop-shadow */
+            padding: 20px;
+            width: 700px;  /* Adjust width as needed */
+          }
+          .card h2 {
+            margin-top: 0;
+          }
+
+          /* Positioning for the camera feed and overlay images */
+          .camera-container {
+            position: relative;
+            display: inline-block;
+          }
+          .camera-container img {
+            display: block;
+            width: 640px;
+            height: auto;
+          }
+          .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            width: 640px;
+            height: auto;
+          }
+        </style>
         <script>
           // Poll /status every 1 second
           function updateStatus() {
@@ -267,20 +323,21 @@ def index():
         </script>
       </head>
 
-      <body style="font-family: Arial, sans-serif; margin: 0; padding: 0;">
-        <div style="display: flex; align-items: flex-start; margin: 20px;">
+      <body>
+        <div style="display: flex; align-items: flex-start; justify-content: center; gap: 40px; padding: 40px;">
+         
           <!-- Left column: Camera 1 on top, status panel beneath -->
-          <div style="display: flex; flex-direction: column; margin-right: 40px;">
+          <div style="background-color: rgba(255, 255, 255, 0.8); border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); padding: 20px; width: 700px;">
             <h2 style="margin: 0;">Camera 1 Feed</h2>
-            <img src="/video_feed1" style="border: 1px solid black; max-width: 640px; display: block;"/>
+            <img src="/video_feed1" style="border: 1px solid black; max-width: 640px; display: block; margin-top: 10px;"/>
             <div id="statusInfo" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px;">
               <!-- status panel updates here -->
             </div>
           </div>
           <!-- Right column: Camera 2 on top, status panel beneath -->
-          <div style="display: flex; flex-direction: column;">
+          <div style="background-color: rgba(255, 255, 255, 0.8); border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); padding: 20px; width: 700px;">
             <h2 style="margin: 0;">Camera 2 Feed</h2>
-            <img src="/video_feed2" style="border: 1px solid black; max-width: 640px; display: block;"/>
+            <img src="/video_feed2" style="border: 1px solid black; max-width: 640px; display: block; margin-top: 10px;"/>
             <div id="statusInfo2" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px;">
               <!-- Status panel for Camera 2 updates here -->
             </div>
