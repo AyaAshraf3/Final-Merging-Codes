@@ -193,6 +193,7 @@ def index():
     <html>
       <head>
         <title>Driver Monitoring Live Stream</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <style>
           /* Make sure body stretches to fill the entire screen height */
           html, body {
