@@ -86,30 +86,87 @@ def generate_frames(camera_stream, name='cam'):
 #     <html>
 #       <head>
 #         <title>Driver Monitoring Live Stream</title>
+#         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+#         <style>
+#           /* Make sure body stretches to fill the entire screen height */
+#           html, body {
+#             margin: 0;
+#             padding: 0;
+#           }
+          
+#           /* Apply the vertical gradient to the entire page */
+#           body {
+#             min-height: 100vh; /* ensures gradient extends fully */
+#             font-family: Arial, sans-serif;
+#             background: linear-gradient(to bottom, #7D33A3, #6882C5);
+#             background-repeat: no-repeat;
+#             /* You can optionally pin the gradient so it doesn't move when scrolling:
+#             background-attachment: fixed; */
+#           }
+
+#           /* Container to center the two cards side-by-side */
+#           .container {
+#             display: flex;
+#             justify-content: center;
+#             align-items: flex-start;
+#             gap: 40px;         /* Space between the two cards */
+#             padding: 40px;     /* Space from the edges of the page */
+#           }
+
+#           /* The “card-like” styling for each camera feed/status panel */
+#           .card {
+#             background-color: rgba(255, 255, 255, 0.8);  /* White w/ transparency */
+#             border-radius: 10px;                         /* Rounded corners */
+#             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);      /* Subtle drop-shadow */
+#             padding: 20px;
+#             width: 700px;  /* Adjust width as needed */
+#           }
+#           .card h2 {
+#             margin-top: 0;
+#           }
+
+#           /* Positioning for the camera feed and overlay images */
+#           .camera-container {
+#             position: relative;
+#             display: inline-block;
+#           }
+#           .camera-container img {
+#             display: block;
+#             width: 640px;
+#             height: auto;
+#           }
+#           .overlay {
+#             position: absolute;
+#             top: 0;
+#             left: 0;
+#             pointer-events: none;
+#             width: 640px;
+#             height: auto;
+#           }
+#         </style>
 #         <script>
 #           // Poll /status every 1 second
 #           function updateStatus() {
 #             fetch('/status')
 #               .then(response => response.json())
 #               .then(data => {
-                
-#                 // Update Camera 1 status panel
+#                 // Update Camera 1 status panel using data.camera1
 #                 document.getElementById("statusInfo").innerHTML = `
 #                   <div style="font-family: Arial, sans-serif;">
 #                     <strong style="font-size: 18px;">Activity and hands detection:</strong>
 #                     <hr>
 #                     <h3 style="margin: 0;">Per Frame Prediction</h3>
 #                     <p style="margin: 0;">
-#                       <b>Driver Activity:</b> ${data.per_frame_driver_activity}<br>
-#                       <b>Hands-on-Wheel:</b> ${data.per_frame_hands_on_wheel}
+#                       <b>Driver Activity:</b> ${data.camera1.per_frame_driver_activity}<br>
+#                       <b>Hands-on-Wheel:</b> ${data.camera1.per_frame_hands_on_wheel}
 #                     </p>
 #                     <hr>
 #                     <h3 style="margin: 0;">State Monitoring</h3>
 #                     <p style="margin: 0;">
-#                       <b>Majority Driver State:</b> ${data.majority_driver_state}<br>
-#                       <b>System Alert:</b> ${data.system_alert}<br>
-#                       <b>Hands Monitoring:</b> ${data.hands_monitoring}<br>
-#                       <b>Hands Monitoring Confidence:</b> ${data.hands_monitoring_confidence}
+#                       <b>Majority Driver State:</b> ${data.camera1.majority_driver_state}<br>
+#                       <b>System Alert:</b> ${data.camera1.system_alert}<br>
+#                       <b>Hands Monitoring:</b> ${data.camera1.hands_monitoring}<br>
+#                       <b>Hands Monitoring Confidence:</b> ${data.camera1.hands_monitoring_confidence}
 #                     </p>
 #                   </div>
 #                 `;  
@@ -160,28 +217,25 @@ def generate_frames(camera_stream, name='cam'):
 #         </script>
 #       </head>
 
-#       <body style="font-family: Arial, sans-serif; margin: 0; padding: 0;">
-#         <div style="display: flex; align-items: flex-start; margin: 20px;">
-          
+#       <body>
+#         <div style="display: flex; align-items: flex-start; justify-content: center; gap: 40px; padding: 40px;">
+         
 #           <!-- Left column: Camera 1 on top, status panel beneath -->
-#           <div style="display: flex; flex-direction: column; margin-right: 40px;">
+#           <div style="background-color: rgba(255, 255, 255, 0.8); border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); padding: 20px; width: 700px;">
 #             <h2 style="margin: 0;">Camera 1 Feed</h2>
-#             <img src="/video_feed1" style="border: 1px solid black; max-width: 640px; display: block;"/>
-            
+#             <img src="/video_feed1" style="border: 1px solid black; max-width: 640px; display: block; margin-top: 10px;"/>
 #             <div id="statusInfo" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px;">
 #               <!-- status panel updates here -->
 #             </div>
 #           </div>
-
-#           <!-- Right column: Camera 2 -->
-#           <div style="display: flex; flex-direction: column;">
+#           <!-- Right column: Camera 2 on top, status panel beneath -->
+#           <div style="background-color: rgba(255, 255, 255, 0.8); border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); padding: 20px; width: 700px;">
 #             <h2 style="margin: 0;">Camera 2 Feed</h2>
-#             <img src="/video_feed2" style="border: 1px solid black; max-width: 640px; display: block;"/>
+#             <img src="/video_feed2" style="border: 1px solid black; max-width: 640px; display: block; margin-top: 10px;"/>
 #             <div id="statusInfo2" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px;">
 #               <!-- Status panel for Camera 2 updates here -->
 #             </div>
 #           </div>
-
 #         </div>
 #       </body>
 #     </html>
@@ -193,53 +247,61 @@ def index():
     <html>
       <head>
         <title>Driver Monitoring Live Stream</title>
+        <!-- Responsive meta tag so the layout scales to device width -->
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        
         <style>
-          /* Make sure body stretches to fill the entire screen height */
+          /* Reset and ensure 100% height for html/body */
           html, body {
             margin: 0;
             padding: 0;
+            
           }
-          
-          /* Apply the vertical gradient to the entire page */
+
+          /* Make the gradient cover the entire visible area */
           body {
-            min-height: 100vh; /* ensures gradient extends fully */
+            min-height: 100vh;
             font-family: Arial, sans-serif;
             background: linear-gradient(to bottom, #7D33A3, #6882C5);
             background-repeat: no-repeat;
-            /* You can optionally pin the gradient so it doesn't move when scrolling:
-            background-attachment: fixed; */
+            background-size: cover;  /* Key: fill entire area */
+            /* background-attachment: fixed;  <-- optional (often ignored on mobile) */
           }
 
-          /* Container to center the two cards side-by-side */
+          /* Flex container that can wrap to avoid horizontal scrolling */
           .container {
             display: flex;
+            flex-wrap: wrap;        /* Allows cards to stack on small screens */
             justify-content: center;
             align-items: flex-start;
-            gap: 40px;         /* Space between the two cards */
-            padding: 40px;     /* Space from the edges of the page */
+            gap: 40px;
+            padding: 20px;
           }
 
-          /* The “card-like” styling for each camera feed/status panel */
+          /* Card styling with a max-width for responsiveness */
           .card {
-            background-color: rgba(255, 255, 255, 0.8);  /* White w/ transparency */
-            border-radius: 10px;                         /* Rounded corners */
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);      /* Subtle drop-shadow */
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
             padding: 20px;
-            width: 700px;  /* Adjust width as needed */
+            width: 100%;           /* Take full width on narrow screens */
+            max-width: 700px;      /* But don’t exceed 700px on larger screens */
+            box-sizing: border-box; /* Ensure padding doesn’t overflow */
           }
           .card h2 {
             margin-top: 0;
           }
 
-          /* Positioning for the camera feed and overlay images */
+          /* Camera container and images: fully responsive */
           .camera-container {
             position: relative;
-            display: inline-block;
+            width: 100%;
+            max-width: 640px;   /* Same ratio as your feed’s resolution */
+            margin: 0 auto;     /* Center images within the card */
           }
           .camera-container img {
             display: block;
-            width: 640px;
+            width: 100%;        /* Scale down on small screens */
             height: auto;
           }
           .overlay {
@@ -247,19 +309,27 @@ def index():
             top: 0;
             left: 0;
             pointer-events: none;
-            width: 640px;
+            width: 100%;        /* Match the underlying image width */
             height: auto;
           }
+
+          /* Simple styling for status panels */
+          .status-panel {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+          }
         </style>
+        
         <script>
           // Poll /status every 1 second
           function updateStatus() {
             fetch('/status')
               .then(response => response.json())
               .then(data => {
-                // Update Camera 1 status panel using data.camera1
+                // Update Camera 1 status panel
                 document.getElementById("statusInfo").innerHTML = `
-                  <div style="font-family: Arial, sans-serif;">
+                  <div>
                     <strong style="font-size: 18px;">Activity and hands detection:</strong>
                     <hr>
                     <h3 style="margin: 0;">Per Frame Prediction</h3>
@@ -276,10 +346,11 @@ def index():
                       <b>Hands Monitoring Confidence:</b> ${data.camera1.hands_monitoring_confidence}
                     </p>
                   </div>
-                `;  
-                // Update Camera 2 status panel using data.camera2
+                `;
+                
+                // Update Camera 2 status panel
                 document.getElementById("statusInfo2").innerHTML = `
-                  <div style="font-family: Arial, sans-serif;">
+                  <div>
                     <strong style="font-size: 18px;">Fatigue detection</strong>
                     <hr>
                     <h3 style="margin: 0;">Gaze Detection</h3>
@@ -312,41 +383,46 @@ def index():
                       <b>Alert:</b> ${data.camera2.alert}
                     </p>
                   </div>
-                `; 
+                `;
               })
               .catch(err => {
                 console.error("Error fetching status:", err);
               });
           }
-          // Update every 1 second (1000 ms)
+          // Update status every second
           setInterval(updateStatus, 1000);
           window.onload = updateStatus;
         </script>
       </head>
 
       <body>
-        <div style="display: flex; align-items: flex-start; justify-content: center; gap: 40px; padding: 40px;">
-         
-          <!-- Left column: Camera 1 on top, status panel beneath -->
-          <div style="background-color: rgba(255, 255, 255, 0.8); border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); padding: 20px; width: 700px;">
-            <h2 style="margin: 0;">Camera 1 Feed</h2>
-            <img src="/video_feed1" style="border: 1px solid black; max-width: 640px; display: block; margin-top: 10px;"/>
-            <div id="statusInfo" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px;">
-              <!-- status panel updates here -->
+        <div class="container">
+          <!-- Camera 1 Card -->
+          <div class="card">
+            <h2>Camera 1 Feed</h2>
+            <div class="camera-container">
+              <img src="/video_feed1" alt="Camera 1 Feed"/>
+            </div>
+            <div id="statusInfo" class="status-panel">
+              <!-- status panel 1 updates here -->
             </div>
           </div>
-          <!-- Right column: Camera 2 on top, status panel beneath -->
-          <div style="background-color: rgba(255, 255, 255, 0.8); border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); padding: 20px; width: 700px;">
-            <h2 style="margin: 0;">Camera 2 Feed</h2>
-            <img src="/video_feed2" style="border: 1px solid black; max-width: 640px; display: block; margin-top: 10px;"/>
-            <div id="statusInfo2" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px;">
-              <!-- Status panel for Camera 2 updates here -->
+
+          <!-- Camera 2 Card -->
+          <div class="card">
+            <h2>Camera 2 Feed</h2>
+            <div class="camera-container">
+              <img src="/video_feed2" alt="Camera 2 Feed"/>
+            </div>
+            <div id="statusInfo2" class="status-panel">
+              <!-- status panel 2 updates here -->
             </div>
           </div>
         </div>
       </body>
     </html>
     """
+
 
 
 # Endpoint for camera 1 stream
@@ -359,69 +435,7 @@ def video_feed1():
 def video_feed2():
     return Response(generate_frames(camera2, 'cam2'), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-# @app.route('/status')
-# def status():
-#     status_file = "status.json"
-#     if os.path.exists(status_file):
-#         try:
-#             with open(status_file, "r") as f:
-#                 data = json.load(f)
-#         except Exception as e:
-#             data = {
-#                 "camera1": {
-#                     "per_frame_driver_activity": "Error reading file",
-#                     "per_frame_hands_on_wheel": "N/A",
-#                     "majority_driver_state": "N/A",
-#                     "system_alert": "N/A",
-#                     "hands_monitoring": "N/A",
-#                     "hands_monitoring_confidence": "N/A"
-#                 },
-#                 "camera2": {
-#                     "gaze_center": "Error reading file",
-#                     "gaze_status": "N/A",
-#                     "pitch": "N/A",
-#                     "yaw": "N/A",
-#                     "roll": "N/A",
-#                     "head_status": "N/A",
-#                     "distraction": "N/A",
-#                     "blinks": "N/A",
-#                     "microsleep_duration": "N/A",
-#                     "yawns": "N/A",
-#                     "yawn_duration": "N/A",
-#                     "blinks_per_minute": "N/A",
-#                     "yawns_per_minute": "N/A",
-#                     "alert": "N/A"
-#                 }
-#             }
-#     else:
-#         data = {
-#             "camera1": {
-#                 "per_frame_driver_activity": "No data yet",
-#                 "per_frame_hands_on_wheel": "No data yet",
-#                 "majority_driver_state": "No data yet",
-#                 "system_alert": "No data yet",
-#                 "hands_monitoring": "No data yet",
-#                 "hands_monitoring_confidence": "No data yet"
-#             },
-#             "camera2": {
-#                 "gaze_center": "No data yet",
-#                 "gaze_status": "No data yet",
-#                 "pitch": "No data yet",
-#                 "yaw": "No data yet",
-#                 "roll": "No data yet",
-#                 "head_status": "No data yet",
-#                 "distraction": "No data yet",
-#                 "blinks": "No data yet",
-#                 "microsleep_duration": "No data yet",
-#                 "yawns": "No data yet",
-#                 "yawn_duration": "No data yet",
-#                 "blinks_per_minute": "No data yet",
-#                 "yawns_per_minute": "No data yet",
-#                 "alert": "No data yet"
-#             }
-#         }
-#     return jsonify(data)
-
+#status endpoint to read JSON files and return their contents
 @app.route('/status')
 def status():
     file1 = "status.json"
