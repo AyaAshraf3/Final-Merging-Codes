@@ -1,165 +1,226 @@
-from flask import Flask, Response, render_template, jsonify
-from waitress import serve
-import threading
+from fastapi import FastAPI, Response
+from fastapi.responses import StreamingResponse, HTMLResponse
 import cv2
+import threading
 import time
 import json
 import os
+import numpy as np
 
-
-app = Flask(__name__)
+app = FastAPI()
 
 # ─────────────────────────────────────
 # Multi-threaded Camera Capture Class
 # ─────────────────────────────────────
 class CameraStream:
     def __init__(self, camera_id):
-        self.cap = cv2.VideoCapture(camera_id)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)
+        self.camera_id = camera_id
+        self.cap = None
         self.frame = None
         self.running = True
+        self.last_frame_time = time.time()
+        self.error_count = 0
+        self.MAX_ERRORS = 5
+        self.initialize_camera()
         self.thread = threading.Thread(target=self.update_frames, daemon=True)
         self.thread.start()
 
+    def initialize_camera(self):
+        try:
+            if self.cap is not None:
+                self.cap.release()
+                time.sleep(0.5)  # Give time for camera to properly release
+            
+            # Try different backend APIs
+            backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY]
+            for backend in backends:
+                try:
+                    self.cap = cv2.VideoCapture(self.camera_id + cv2.CAP_DSHOW)
+                    if self.cap.isOpened():
+                        break
+                    self.cap.release()
+                except Exception:
+                    continue
+
+            if not self.cap.isOpened():
+                raise RuntimeError(f"Failed to open camera {self.camera_id}")
+
+            # Set camera properties
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+            self.cap.set(cv2.CAP_PROP_FPS, 30)
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer size
+            
+            # Read a test frame
+            success, _ = self.cap.read()
+            if not success:
+                raise RuntimeError("Failed to read test frame")
+
+            print(f"✅ Camera {self.camera_id} initialized successfully")
+            self.error_count = 0
+            return True
+        except Exception as e:
+            print(f"⚠️ Error initializing camera {self.camera_id}: {str(e)}")
+            if self.cap is not None:
+                self.cap.release()
+            self.cap = None
+            return False
+
     def update_frames(self):
         while self.running:
-            success, frame = self.cap.read()
-            if success:
-                self.frame = frame
-            time.sleep(0.01)
+            try:
+                if self.cap is None or not self.cap.isOpened():
+                    if self.error_count < self.MAX_ERRORS:
+                        self.error_count += 1
+                        print(f"⚠️ Camera {self.camera_id} lost connection, attempting to reinitialize ({self.error_count}/{self.MAX_ERRORS})")
+                        if self.initialize_camera():
+                            continue
+                    time.sleep(1)
+                    continue
+
+                success, frame = self.cap.read()
+                if success:
+                    self.frame = frame
+                    self.last_frame_time = time.time()
+                    self.error_count = 0
+                else:
+                    current_time = time.time()
+                    if current_time - self.last_frame_time > 3.0:  # No frames for 3 seconds
+                        print(f"⚠️ No frames from camera {self.camera_id} for 3 seconds, reinitializing...")
+                        self.initialize_camera()
+                time.sleep(0.02)  # Prevent CPU overuse
+
+            except Exception as e:
+                print(f"⚠️ Error in camera {self.camera_id} thread: {str(e)}")
+                self.error_count += 1
+                if self.error_count >= self.MAX_ERRORS:
+                    print(f"❌ Too many errors for camera {self.camera_id}, stopping attempts")
+                    break
+                time.sleep(1)
 
     def get_frame(self):
-        return self.frame
-      
+        if self.frame is None or time.time() - self.last_frame_time > 5.0:
+            return None
+        return self.frame.copy()  # Return a copy to prevent race conditions
+
     def isOpened(self):
-        return self.cap.isOpened()
+        return self.cap is not None and self.cap.isOpened()
 
     def stop(self):
         self.running = False
         self.thread.join()
-        self.cap.release()
+        if self.cap is not None:
+            self.cap.release()
 
-# ─────────────────────────────
-# Initialize both camera feeds
-# ─────────────────────────────
-camera1 = CameraStream(1)
-camera2 = CameraStream(0)
+# Initialize both camera feeds with correct indices
+print("Initializing cameras...")
+camera1 = CameraStream(0)  # Try primary camera first
+camera2 = CameraStream(1)  # Try secondary camera
 
-# ───────────────────────────────
-# Frame Generator with FPS Logging
-# ───────────────────────────────
 def generate_frames(camera_stream, name='cam'):
-    prev_time = time.time()
     while True:
-        start_time = time.time()
-        frame = camera_stream.get_frame()
-        if frame is None:
-            continue
+        try:
+            frame = camera_stream.get_frame()
+            if frame is None:
+                # Return a blank frame if camera is not working
+                frame = np.zeros((360, 480, 3), dtype=np.uint8)
+                cv2.putText(frame, "Camera Disconnected", (120, 180), 
+                          cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            
+            # Resize frame for better performance
+            frame = cv2.resize(frame, (0, 0), fx=0.6, fy=0.6)
+            
+            # Encode frame to JPEG
+            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+            if not ret:
+                continue
+                
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            
+        except Exception as e:
+            print(f"Error in generate_frames for {name}: {str(e)}")
+            time.sleep(0.1)
 
-        # Encode frame to JPEG
-        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
-        if not ret:
-          continue
-        frame = buffer.tobytes()
+@app.get("/video_feed1")
+def video_feed1():
+    return StreamingResponse(
+        generate_frames(camera1, 'cam1'),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
 
-        # Measure FPS and latency
-        end_time = time.time()
-        latency = (end_time - start_time) * 1000  # in ms
-        fps = 1 / (end_time - prev_time) if (end_time - prev_time) != 0 else 0
-        prev_time = end_time
-        print(f"[{name}] FPS: {fps:.2f} | Latency: {latency:.2f} ms")
+@app.get("/video_feed2")
+def video_feed2():
+    return StreamingResponse(
+        generate_frames(camera2, 'cam2'),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
 
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        time.sleep(0.03)  # Adjust frame rate as needed
-
-# ────────────────
-# Flask Routes
-# ────────────────
-
-# Main page showing Camera 1 feed with status panel and Camera 2 feed below
-@app.route('/')
-def index():
+@app.get("/", response_class=HTMLResponse)
+async def index():
     return """
     <html>
       <head>
         <title>Driver Monitoring Live Stream</title>
-        <!-- Responsive meta tag so the layout scales to device width -->
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         
         <style>
-          /* Reset and ensure 100% height for html/body */
           html, body {
             margin: 0;
             padding: 0;
-            
           }
 
-          /* Make the gradient cover the entire visible area */
           body {
             min-height: 100vh;
             font-family: Arial, sans-serif;
             background: linear-gradient(to bottom, #7D33A3, #6882C5);
             background-repeat: no-repeat;
-            background-size: cover;  /* Key: fill entire area */
-            /* background-attachment: fixed;  <-- optional (often ignored on mobile) */
+            background-size: cover;
           }
 
-          /* Flex container that can wrap to avoid horizontal scrolling */
           .container {
             display: flex;
-            flex-wrap: wrap;        /* Allows cards to stack on small screens */
+            flex-wrap: wrap;
             justify-content: center;
             align-items: flex-start;
             gap: 40px;
             padding: 20px;
           }
 
-          /* Card styling with a max-width for responsiveness */
           .card {
             background-color: rgba(255, 255, 255, 0.8);
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
             padding: 20px;
-            width: 100%;           /* Take full width on narrow screens */
-            max-width: 700px;      /* But don't exceed 700px on larger screens */
-            box-sizing: border-box; /* Ensure padding doesn't overflow */
+            width: 100%;
+            max-width: 700px;
+            box-sizing: border-box;
           }
+
           .card h2 {
             margin-top: 0;
           }
 
-          /* Camera container and images: fully responsive */
           .camera-container {
             position: relative;
             width: 100%;
-            max-width: 640px;   /* Same ratio as your feed's resolution */
-            margin: 0 auto;     /* Center images within the card */
+            max-width: 640px;
+            margin: 0 auto;
           }
+
           .camera-container img {
             display: block;
-            width: 100%;        /* Scale down on small screens */
-            height: auto;
-          }
-          .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            width: 100%;        /* Match the underlying image width */
+            width: 100%;
             height: auto;
           }
 
-          /* Simple styling for status panels */
           .status-panel {
             margin-top: 20px;
             border: 1px solid #ccc;
             padding: 10px;
           }
 
-          /* New confidence display box styling */
           .confidence-box {
             margin: 10px 0;
             padding: 15px;
@@ -168,10 +229,12 @@ def index():
             font-size: 24px;
             font-weight: bold;
           }
+
           .confidence-good {
             background-color: rgba(0, 255, 0, 0.2);
             color: green;
           }
+
           .confidence-bad {
             background-color: rgba(255, 0, 0, 0.2);
             color: red;
@@ -179,7 +242,6 @@ def index():
         </style>
         
         <script>
-          // Poll /status every 1 second
           function updateStatus() {
             fetch('/status')
               .then(response => response.json())
@@ -189,7 +251,7 @@ def index():
                   <div>
                     <strong style="font-size: 18px;">Activity and hands detection</strong>
                     <hr>
-                    <div class="confidence-box ${data.camera1.system_alert === "Good boy" ? 'confidence-good' : 'confidence-bad'}">
+                    <div class="confidence-box ${data.camera1.system_alert === "Good job,you're driving safely" ? 'confidence-good' : 'confidence-bad'}">
                       System Alert: ${data.camera1.system_alert}
                     </div>
                     <h3 style="margin: 0;">Per Frame Prediction</h3>
@@ -249,9 +311,12 @@ def index():
                 console.error("Error fetching status:", err);
               });
           }
+
           // Update status every second
-          setInterval(updateStatus, 1000);
-          window.onload = updateStatus;
+          window.onload = function() {
+            updateStatus();
+            setInterval(updateStatus, 1000);
+          };
         </script>
       </head>
 
@@ -283,25 +348,12 @@ def index():
     </html>
     """
 
-
-
-# Endpoint for camera 1 stream
-@app.route('/video_feed1')
-def video_feed1():
-    return Response(generate_frames(camera1, 'cam1'), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-# Endpoint for camera 2 stream
-@app.route('/video_feed2')
-def video_feed2():
-    return Response(generate_frames(camera2, 'cam2'), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-#status endpoint to read JSON files and return their contents
-@app.route('/status')
-def status():
+@app.get("/status")
+async def status():
     file1 = "status.json"
     file2 = "status_driver_fatigue.json"
     
-    # Read Camera 1 data from file1
+    # Read Camera 1 data
     if os.path.exists(file1):
         try:
             with open(file1, "r") as f:
@@ -326,7 +378,7 @@ def status():
             "hands_monitoring_confidence": "No data yet"
         }
     
-    # Read Camera 2 data from file2
+    # Read Camera 2 data
     if os.path.exists(file2):
         try:
             with open(file2, "r") as f:
@@ -367,16 +419,8 @@ def status():
             "alert": "No data yet"
         }
     
-    combined = {
-        "camera1": data1,
-        "camera2": data2
-    }
-    return jsonify(combined)
+    return {"camera1": data1, "camera2": data2}
 
-
-
-# ───────────────────────────────
-# Start Waitress Production Server
-# ───────────────────────────────
 if __name__ == '__main__':
-    serve(app, host='0.0.0.0', port=5000, threads=8)
+    import uvicorn
+    uvicorn.run("livestreaming_fastAPI:app", host="0.0.0.0", port=5000)
