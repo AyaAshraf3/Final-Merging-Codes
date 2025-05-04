@@ -1,0 +1,7 @@
+{
+  "Activity_Alert": "Safe driving",
+  "HOW_Alert": "Hands On Wheel",
+  "Fatigue_Alert": "off",
+  "Distraction_Alert": "off",
+  "sleep_alert": "off"
+}

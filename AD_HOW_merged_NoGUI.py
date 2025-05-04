@@ -13,6 +13,11 @@ import sys
 import json
 from collections import deque
 from pathlib import Path
+import os
+
+
+JSON_PATH = "driver_assistant.json"
+
 
 torch.cuda.empty_cache()
 
@@ -105,7 +110,8 @@ def preprocess_HOW(frame):
     return img
 
 def capture_frames(video_path):
-    cap = cv2.VideoCapture("http://127.0.0.1:5000/video_feed1")
+    #cap = cv2.VideoCapture("http://127.0.0.1:5000/video_feed1")
+    cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     frame_time = 1 / fps if fps > 0 else 1 / 30  
 
@@ -226,7 +232,7 @@ def majority_how_update():
         hands_confidence = "⚠🚨WARNING! Hands off wheel detected!"
     print(f"HANDs Majority Updated: {hands_state}, {hands_confidence}")
 
-def majority_class_update():
+def majority_driving_state_update():
     global driver_state, confidence_text
     # Ensure at least 100 frames related to AD are collected
     queue_list = list(result_queue.queue)  # Convert queue to list
@@ -256,6 +262,57 @@ def majority_class_update():
         confidence_text = "⚠🚨ALERT!!! PUT YOUR HANDS ON THE WHEEL"
     print(f"AD Majority Updated: {driver_state}, {confidence_text}")
 
+def majority_AD_update():
+    global majority_class
+    queue_list = list(result_queue.queue)
+    ad_predictions = [predictions for source, _, predictions in queue_list if source == "AD"]
+
+    if (result_queue.qsize()) < 100:  
+        print(f"Queue size is {result_queue.qsize()}, waiting for 100 AD frames...")
+        return 
+    
+    # Initialize a counter for each class (10 classes total)
+    class_counts = [0] * 10
+    
+    # Count occurrences of each class in the last 100 frames
+    for predictions in ad_predictions[-100:]:  # Only look at last 100 frames
+        driver_label, _ = predictions[0]
+        # Find the class index from the label
+        for class_idx, class_name in class_labels.items():
+            if driver_label == class_name:
+                class_counts[class_idx] += 1
+                break
+    
+    # Find the class with maximum occurrences
+    max_count = max(class_counts)
+    majority_class_idx = class_counts.index(max_count)
+    majority_class = class_labels[majority_class_idx]
+ 
+
+def update_driver_assistant_field(**field_updates):
+    """
+    Update multiple fields in the driver assistant JSON file simultaneously.
+    Args:
+        **field_updates: Keyword arguments where key is field_name and value is new_value
+    """
+    try:
+        # 1. Read existing data (or start fresh)
+        if os.path.exists(JSON_PATH):
+            with open(JSON_PATH, "r") as f:
+                data = json.load(f)
+        else:
+            data = {}
+
+        # 2. Update all fields at once
+        data.update(field_updates)
+
+        # 3. Write directly to the file
+        with open(JSON_PATH, "w") as f:
+            json.dump(data, f, indent=2)
+
+    except Exception as e:
+        print(f"Error updating driver assistant fields: {e}")
+
 def update_status_loop():
     """
     This loop periodically retrieves the latest predictions from the result queue,
@@ -282,8 +339,15 @@ def update_status_loop():
             per_frame_driver_activity = f"{driver_state_gui} ({conf_gui}%)"
             yes_no = "Yes" if highest_cls == 1 else "No"
             per_frame_hands_on_wheel = f"{yes_no} ({highest_conf:.2f})"
-            majority_class_update()
+            majority_driving_state_update()
             majority_how_update()
+            majority_AD_update()
+
+            # Update all fields simultaneously
+            update_driver_assistant_field(
+                Activity_Alert=majority_class,
+                HOW_Alert=hands_state,
+            )
 
             data = {
                 "per_frame_driver_activity": per_frame_driver_activity,

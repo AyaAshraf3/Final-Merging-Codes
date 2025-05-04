@@ -1,1 +1,16 @@
-{"gaze_center": "Center", "gaze_status": "NORMAL", "pitch": "Pitch: -48.55 deg", "yaw": "Yaw: 0.00 deg", "roll": "Roll: -87.27 deg", "head_status": "NORMAL", "distraction": "Distraction Count within 3 min: 2", "blinks": "num of blinks: 41", "microsleep_duration": "microsleep duration: 0.00 sec", "yawns": "num of yawns: 8", "yawn_duration": "yawn duration: 0.00 sec", "blinks_per_minute": "blinks/min: 22", "yawns_per_minute": "yawns/min: 4", "alert": 1}
+{
+  "gaze_center": "Center",
+  "gaze_status": "NORMAL",
+  "pitch": "Pitch: -54.04 deg",
+  "yaw": "Yaw: -1.13 deg",
+  "roll": "Roll: -89.03 deg",
+  "head_status": "NORMAL",
+  "distraction": "Distraction Count within 3 min: 0",
+  "blinks": "num of blinks: 63",
+  "microsleep_duration": "microsleep duration: 0.00 sec",
+  "yawns": "num of yawns: 1",
+  "yawn_duration": "yawn duration: 0.00 sec",
+  "blinks_per_minute": "blinks/min: 21",
+  "yawns_per_minute": "yawns/min: 0",
+  "alert": "Driver is awake and focused"
+}

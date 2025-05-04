@@ -189,8 +189,8 @@ def index():
                   <div>
                     <strong style="font-size: 18px;">Activity and hands detection</strong>
                     <hr>
-                    <div class="confidence-box ${data.camera1.system_alert === "Good boy" ? 'confidence-good' : 'confidence-bad'}">
-                      System Alert: ${data.camera1.system_alert}
+                    <div class="confidence-box ${data.camera1.system_alert === "Good job,you're driving safely" ? 'confidence-good' : 'confidence-bad'}">
+                      ${data.camera1.system_alert}
                     </div>
                     <h3 style="margin: 0;">Per Frame Prediction</h3>
                     <p style="margin: 0;">
@@ -213,6 +213,9 @@ def index():
                   <div>
                     <strong style="font-size: 18px;">Fatigue detection</strong>
                     <hr>
+                     <div class="confidence-box ${data.camera2.alert == 'Driver is awake and focused' ? 'confidence-good' : 'confidence-bad'}">
+                        ${data.camera2.alert}
+                      </div>
                     <h3 style="margin: 0;">Gaze Detection</h3>
                     <p style="margin: 0;">
                       <b>Position:</b> ${data.camera2.gaze_center}<br>
@@ -240,7 +243,6 @@ def index():
                       <b>Yawn Duration:</b> ${data.camera2.yawn_duration}<br>
                       <b>Blinks Per Minute:</b> ${data.camera2.blinks_per_minute}<br>
                       <b>Yawns Per Minute:</b> ${data.camera2.yawns_per_minute}<br>
-                      <b>Alert:</b> ${data.camera2.alert}
                     </p>
                   </div>
                 `;
