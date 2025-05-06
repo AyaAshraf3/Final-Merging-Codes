@@ -5,6 +5,7 @@ import cv2
 import time
 import json
 import os
+from flask import send_from_directory
 
 
 app = Flask(__name__)
@@ -376,6 +377,13 @@ def status():
     return jsonify(combined)
 
 
+@app.route('/driver_assistant.json')
+def driver_assistant():
+    filename = 'driver_assistant.json'
+    if os.path.exists(filename):
+        return send_from_directory(os.getcwd(), filename, mimetype='application/json')
+    else:
+        return jsonify({"error": "driver_assistant.json not found"}), 404
 
 # ───────────────────────────────
 # Start Waitress Production Server

@@ -1,0 +1,7 @@
+{
+  "Fatigue_Alert": "on",
+  "Distraction_Alert": "off",
+  "sleep_alert": "off",
+  "Activity_Alert": "Talking to passenger(s)",
+  "HOW_Alert": "Hands Off Wheel"
+}

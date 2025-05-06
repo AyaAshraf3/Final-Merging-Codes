@@ -1,0 +1,16 @@
+{
+  "gaze_center": "Center",
+  "gaze_status": "NORMAL",
+  "pitch": "Pitch: -49.18 deg",
+  "yaw": "Yaw: -1.04 deg",
+  "roll": "Roll: -93.24 deg",
+  "head_status": "NORMAL",
+  "distraction": "Distraction Count within 3 min: 0",
+  "blinks": "num of blinks: 560",
+  "microsleep_duration": "microsleep duration: 0.00 sec",
+  "yawns": "num of yawns: 0",
+  "yawn_duration": "yawn duration: 0.00 sec",
+  "blinks_per_minute": "blinks/min: 81",
+  "yawns_per_minute": "yawns/min: 0",
+  "alert": "\u26a0\ufe0fAlert! Driver is Highly Fatigued!"
+}
